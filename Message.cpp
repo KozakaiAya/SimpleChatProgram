@@ -109,7 +109,9 @@ RecvMsg::RecvMsg(string msg)
                     this->payload = msg.substr(37, msg.length() - 37 - 2);
             } else
             {
-                this->payload = msg.substr(23, msg.length() - 23 - 2);
+                string sendTargetT = msg.substr(30, 2);
+                this->sendToID = convertBinToUint16(sendTargetT);
+                this->payload = msg.substr(34, msg.length() - 34 - 2);
             }
         }
     } else
@@ -125,12 +127,26 @@ uint16_t RecvMsg::convertBinToUint16(string str)
     return ret;
 }
 
-SndMsg::SndMsg(int fd, MsgType msgType, string payload)
+SndMsg::SndMsg(int socketFD, int fd, MsgType msgType, string payload)
 {
+    this->socketFD = socketFD
     this->sendToID = fd;
     this->type = msgType;
     this->payload = payload;
-    this->length = 37 + payload.length() + 2;
+    this->length = 34 + payload.length() + 2;
+}
+
+SndMsg::SndMsg(int socketFD, int fd, MsgType msgType, CmdType cmdType, string payload)
+{
+    this->socketFD = socketFD;
+    this->sendToID = fd;
+    this->type = msgType;
+    this->cmdType = cmdType;
+    this->payload = payload;
+    if (cmdType == CmdType::SEND)
+        this->length = 48 + payload.length() + 2;
+    else
+        this->length = 37 + payload.length() + 2;
 }
 
 string SndMsg::convertUint16ToBin(uint16_t n)
@@ -151,6 +167,10 @@ int SndMsg::msgSend()
         if (this->cmdType == CmdType::SEND)
             sndBuf += "Target:" + convertUint16ToBin(this->sendToID) + "##";
     }
+    if (this->type == MsgType::SND)
+    {
+        sndBuf += "Target:" + convertUint16ToBin(this->sendToID) + "##";
+    }
     sndBuf += this->payload + "$$";
-    send(this->sendToID, sndBuf.c_str(), sndBuf.length(), 0);
+    send(this->socketFD, sndBuf.c_str(), sndBuf.length(), 0);
 }

@@ -45,13 +45,15 @@ private:
 class SndMsg : public Message
 {
 public:
+    int socketFD;
+
     SndMsg() : Message() {};
 
     //Normal Message
-    SndMsg(int fd, MsgType msgType, string payload);
+    SndMsg(int socketFD, int fd, MsgType msgType, string payload);
 
     // Command
-    SndMsg(int fd, MsgType msgType, CmdType cmdType, string payload);
+    SndMsg(int socketFD, int fd, MsgType msgType, CmdType cmdType, string payload);
 
     int msgSend();
 

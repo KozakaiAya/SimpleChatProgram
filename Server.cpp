@@ -67,7 +67,7 @@ int main(void)
 void userHandler(User user)
 {
     char buf[65536];
-    SndMsg ackMsg(user.id, MsgType::ACK, CmdType::CONN, "Server: Connection Established");
+    SndMsg ackMsg(user.id, user.id, MsgType::ACK, CmdType::CONN, "Server: Connection Established");
     ackMsg.msgSend();
     while (1)
     {
@@ -81,13 +81,13 @@ void userHandler(User user)
             switch (msg.cmdType)
             {
                 case CmdType::SEND:
-                    sendMsg = SndMsg(msg.sendToID, MsgType::SND, msg.payload);
+                    sendMsg = SndMsg(msg.sendToID, user.id, MsgType::SND, msg.payload);
                     break;
                 case CmdType::NAME:
                     char nameBuf[100];
                     int retN = gethostname(nameBuf, 100);
                     nameBuf[retN] = '\0';
-                    sendMsg = SndMsg(user.id, MsgType::CMD, CmdType::NAME, nameBuf);
+                    sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::NAME, nameBuf);
                     break;
                 case CmdType::TIME:
                     char timeBuf[100];
@@ -96,7 +96,7 @@ void userHandler(User user)
                     time(&rawTime);
                     timeInfo = localtime(&rawTime);
                     strftime(timeBuf, sizeof(timeBuf), "%d-%m-%Y %I:%M:%S", timeInfo);
-                    sendMsg = SndMsg(user.id, MsgType::CMD, CmdType::TIME, timeBuf);
+                    sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::TIME, timeBuf);
                     break;
                 case CmdType::LIST:
                     string listBuf;
@@ -110,10 +110,10 @@ void userHandler(User user)
                         }
                     }
                     listBuf = "Count:" + SndMsg::convertUint16ToBin(count) + "\n" + listBuf;
-                    sendMsg = SndMsg(user.id, MsgType::CMD, CmdType::LIST, listBuf);
+                    sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::LIST, listBuf);
                     break;
                 case CmdType::DISC:
-                    sendMsg = SndMsg(user.id, MsgType::ACK, CmdType::DISC, "Server: Connection Closed");
+                    sendMsg = SndMsg(user.id, user.id, MsgType::ACK, CmdType::DISC, "Server: Connection Closed");
                     sendMsg.msgSend();
                     user.isValid = false;
                     shutdown(user.id, 0);
@@ -121,6 +121,13 @@ void userHandler(User user)
                     break;
             }
             sendMsg.msgSend();
+        } else if (msg.type == MsgType::ACK)
+        {
+            if (msg.cmdType == CmdType::SEND)
+            {
+                sendMsg = SndMsg(msg.sendToID, msg.sendToID, MsgType::ACK, CmdType::SEND, msg.payload);
+                sendMsg.msgSend();
+            }
         }
     }
 }
@@ -129,7 +136,7 @@ void ctrlCHandler(int x)
 {
     for (auto x:userList)
     {
-        SndMsg sendMsg(x.id, MsgType::ACK, CmdType::DISC, "Server: Connection Closed");
+        SndMsg sendMsg(x.id, x.id, MsgType::ACK, CmdType::DISC, "Server: Connection Closed");
         sendMsg.msgSend();
         shutdown(x.id, 0);
     }
