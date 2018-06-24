@@ -53,7 +53,8 @@ public:
     SndMsg(int socketFD, int fd, MsgType msgType, string payload);
 
     // Command
-    SndMsg(int socketFD, int fd, MsgType msgType, CmdType cmdType, string payload);
+    SndMsg(int socketFD,
+           int fd, MsgType msgType, CmdType cmdType, string payload);
 
     int msgSend();
 

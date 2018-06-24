@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <cstring>
 #include "Message.h"
 
 string to_string(CmdType cmdType)
@@ -24,7 +25,7 @@ string to_string(CmdType cmdType)
             return "CONN";
             break;
         case CmdType::LIST:
-            return "LIST:";
+            return "LIST";
             break;
         case CmdType::NAME:
             return "NAME";
@@ -59,6 +60,9 @@ ostream &operator<<(ostream &os, const Message &msg)
         os << "CmdType: " << to_string(msg.cmdType);
         if (msg.cmdType == CmdType::SEND)
             os << "Target: " << msg.sendToID;
+    } else if (msg.type == MsgType::SND)
+    {
+        os << "Target: " << msg.sendToID;
     }
     os << "Payload: " << msg.payload;
     return os;
@@ -121,8 +125,8 @@ RecvMsg::RecvMsg(string msg)
 uint16_t RecvMsg::convertBinToUint16(string str)
 {
     char lenBuf[2];
-    lenBuf[0] = str.c_str()[0];
-    lenBuf[1] = str.c_str()[1];
+    lenBuf[1] = str.c_str()[0] - 1;
+    lenBuf[0] = str.c_str()[1];
     uint16_t ret = *(reinterpret_cast<uint16_t *>(lenBuf));
     return ret;
 }
@@ -152,8 +156,8 @@ SndMsg::SndMsg(int socketFD, int fd, MsgType msgType, CmdType cmdType, string pa
 string SndMsg::convertUint16ToBin(uint16_t n)
 {
     char buf[3];
-    buf[0] = reinterpret_cast<char *>(&n)[0];
-    buf[1] = reinterpret_cast<char *>(&n)[1];
+    buf[1] = reinterpret_cast<char *>(&n)[0];
+    buf[0] = reinterpret_cast<char *>(&n)[1] + 1;
     buf[2] = '\0';
     return string(buf);
 }
@@ -172,5 +176,8 @@ int SndMsg::msgSend()
         sndBuf += "Target:" + convertUint16ToBin(this->sendToID) + "##";
     }
     sndBuf += this->payload + "$$";
+
+    //char* sndBufC = new char[sndBuf.length()];
+    //strcpy(sndBufC, sndBuf.c_str());
     send(this->socketFD, sndBuf.c_str(), sndBuf.length(), 0);
 }

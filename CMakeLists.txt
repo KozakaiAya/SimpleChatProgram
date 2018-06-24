@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(SimpleChatProgram)
 
 set(CMAKE_CXX_STANDARD 11)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fno-limit-debug-info")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)

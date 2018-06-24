@@ -14,11 +14,12 @@
 #include "Message.h"
 #include "User.h"
 
+
 using namespace std;
 
 bool isConnected = false;
 bool tryExit = false;
-bool realExit = true;
+bool realExit = false;
 
 queue<SndMsg> sendQueue;
 queue<RecvMsg> recvQueue;
@@ -51,6 +52,8 @@ int main(void)
             cerr << "Command should start with \'/\', type /HELP to get the available commands" << endl;
         }
         command.erase(0, 1);
+
+        cout << "Command: " << command << endl;
         if (command == "CONNECT")
         {
             cout << "Please input server IP and Port, example: \"127.0.0.1:2333\"" << endl;
@@ -103,6 +106,7 @@ int main(void)
             else
             {
                 SndMsg sendMsg(client, client, MsgType::CMD, CmdType::NAME, "");
+                cout << "Prepare to Send: " << sendMsg << endl;
                 sendQ_mutex.lock();
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
@@ -129,7 +133,7 @@ int main(void)
                 cin >> sendFD;
                 cout << "Message: ";
                 cin >> payload;
-                SndMsg sendMsg(client, stoi(sendFD), MsgType::CMD, CmdType::TIME, "");
+                SndMsg sendMsg(client, stoi(sendFD), MsgType::CMD, CmdType::SEND, payload);
                 sendQ_mutex.lock();
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
@@ -149,23 +153,7 @@ int main(void)
             }
         }
 
-        //Display Message
-        recvQ_mutex.lock();
-        while (!recvQueue.empty())
-        {
-            RecvMsg msg = recvQueue.front();
-            cout << msg.payload;
-            recvQueue.pop();
-            if (msg.type == MsgType::SND)
-            {
-                sendQ_mutex.lock();
-                SndMsg sndMsg(client, msg.sendToID, MsgType::ACK, CmdType::SEND, msg.payload);
-                sendQ_mutex.unlock();
-            }
-            if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC) && (tryExit))
-                break;
-        }
-        recvQ_mutex.unlock();
+        if (realExit) break;
     }
     realExit = true;
     sendThread->join();
@@ -176,16 +164,31 @@ int main(void)
 
 void messageRecv(int sockFD)
 {
+    cout << "Recv Thread Start" << endl;
     char buf[65536];
     while (1)
     {
-        if (realExit) break;
+        //cout << "Recv Thread Start" << endl;
         int n = recv(sockFD, buf, 65536, 0);
         buf[n] = '\0';
         RecvMsg msg(buf);
-        recvQ_mutex.lock();
-        recvQueue.push(msg);
-        recvQ_mutex.unlock();
+
+        cout << "Recv: " << msg << endl;
+
+        cout << msg.payload << endl;
+        recvQueue.pop();
+        if (msg.type == MsgType::SND)
+        {
+            sendQ_mutex.lock();
+            SndMsg sndMsg(sockFD, sockFD, MsgType::ACK, CmdType::SEND, msg.payload);
+            sendQueue.push(sndMsg);
+            sendQ_mutex.unlock();
+        }
+        if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC) && (tryExit))
+        {
+            realExit = true;
+            break;
+        }
     }
     return;
 }
@@ -193,13 +196,16 @@ void messageRecv(int sockFD)
 
 void messageSend(int sockFD)
 {
+    cout << "Send Thread Start" << endl;
     while (1)
     {
+        //cout << "Send Thread Start" << endl;
         if (realExit) break;
         sendQ_mutex.lock();
         while (!sendQueue.empty())
         {
             SndMsg msg = sendQueue.front();
+            cout << "Send: " << msg << endl;
             msg.msgSend();
             sendQueue.pop();
         }

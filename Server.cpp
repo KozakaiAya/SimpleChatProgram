@@ -27,6 +27,8 @@ void ctrlCHandler(int x);
 
 void userHandler(User user);
 
+void messageSend(void);
+
 int main(void)
 {
     signal(SIGINT, ctrlCHandler);
@@ -54,6 +56,10 @@ int main(void)
         cerr << "Listen Failed" << endl;
         exit(EXIT_FAILURE);
     }
+
+    thread *sendMsgThread = new thread(messageSend);
+    sendMsgThread->detach();
+    threadList.push_back(sendMsgThread);
 
     while (1)
     {
@@ -86,7 +92,7 @@ void userHandler(User user)
         buf[n] = '\0';
         RecvMsg msg(buf);
 
-        cout << msg << endl;
+        cout << "Recv: " << msg << endl;
 
         SndMsg sendMsg;
         if (msg.type == MsgType::CMD)
@@ -129,7 +135,7 @@ void userHandler(User user)
                             count++;
                         }
                     }
-                    listBuf = "Count:" + SndMsg::convertUint16ToBin(count) + "\n" + listBuf;
+                    listBuf = "Count: " + to_string(count) + "\n" + listBuf;
                     sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::LIST, listBuf);
                     break;
                 }
@@ -143,15 +149,18 @@ void userHandler(User user)
                     break;
                 }
             }
-            sendMsg.msgSend();
+            //sendMsg.msgSend();
         } else if (msg.type == MsgType::ACK)
         {
             if (msg.cmdType == CmdType::SEND)
             {
                 sendMsg = SndMsg(msg.sendToID, msg.sendToID, MsgType::ACK, CmdType::SEND, msg.payload);
-                sendMsg.msgSend();
+                //sendMsg.msgSend();
             }
         }
+        sendQ_mutex.lock();
+        sendQueue.push(sendMsg);
+        sendQ_mutex.unlock();
     }
 }
 
@@ -166,5 +175,25 @@ void ctrlCHandler(int x)
     cout << "Server Shutdown" << endl;
     return;
 }
+
+void messageSend(void)
+{
+    cout << "Send Thread Start" << endl;
+    while (1)
+    {
+        //cout << "Send Thread Start" << endl;
+        sendQ_mutex.lock();
+        while (!sendQueue.empty())
+        {
+            SndMsg msg = sendQueue.front();
+            cout << "Send: " << msg << endl;
+            msg.msgSend();
+            sendQueue.pop();
+        }
+        sendQ_mutex.unlock();
+    }
+    return;
+}
+
 
 
