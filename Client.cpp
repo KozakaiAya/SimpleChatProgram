@@ -37,7 +37,7 @@ void messageSend(int sockFD);
 
 int main(void)
 {
-    int client = socket(AF_INET, SOCK_STREAM, 0);
+    int client;
     /*while (1)
     {
         cout << "Please input port: " << endl;
@@ -51,6 +51,8 @@ int main(void)
         if (bind(client, (struct sockaddr *) &localaddr, sizeof(localaddr)) == 0)
             break;
     }*/
+
+    cout << "Client Started. Type \"/HELP\" to see available comands." << endl;
 
     thread *recvThread;
     thread *sendThread;
@@ -68,28 +70,38 @@ int main(void)
         cout << "Command: " << command << endl;
         if (command == "CONNECT")
         {
-            cout << "Please input server IP and Port, example: \"127.0.0.1:2333\"" << endl;
-            string server;
-            cin >> server;
-            string serverIP = server.substr(0, server.find(':'));
-            int serverPort = stoi(server.substr(server.find(':') + 1, server.length() - serverIP.length() - 1));
-            struct sockaddr_in server_addr;
-            server_addr.sin_port = htons(serverPort);
-            server_addr.sin_family = AF_INET;
-            server_addr.sin_addr.s_addr = inet_addr(serverIP.c_str());
-            if (connect(client, (struct sockaddr *) &server_addr, sizeof(server_addr)) == 0)
+            if (!isConnected)
             {
-                cout << "Successfully connected to " << server << endl;
+                client = socket(AF_INET, SOCK_STREAM, 0);
+                cout << "Please input server IP and Port, example: \"127.0.0.1:2333\"" << endl;
+                string server;
+                cin >> server;
+                string serverIP = server.substr(0, server.find(':'));
+                int serverPort = stoi(server.substr(server.find(':') + 1, server.length() - serverIP.length() - 1));
+                struct sockaddr_in server_addr;
+                server_addr.sin_port = htons(serverPort);
+                server_addr.sin_family = AF_INET;
+                server_addr.sin_addr.s_addr = inet_addr(serverIP.c_str());
+                if (connect(client, (struct sockaddr *) &server_addr, sizeof(server_addr)) == 0)
+                {
+                    cout << "Successfully connected to " << server << endl;
 
-                isConnected = true;
+                    isConnected = true;
 
-                recvThread = new thread(messageRecv, client);
-                sendThread = new thread(messageSend, client);
-            } else
-            {
-                cerr << "Connection Failed." << endl;
+                    recvThread = new thread(messageRecv, client);
+                    sendThread = new thread(messageSend, client);
+                }
+                else
+                {
+                    cerr << "Connection Failed." << endl;
+                }
             }
-        } else if (command == "DISCONNECT")
+            else
+            {
+                cout << "Already connected" << endl;
+            }
+        }
+        else if (command == "DISCONNECT")
         {
             if (!isConnected)
                 cerr << "You should connect to a server first" << endl;
@@ -101,7 +113,8 @@ int main(void)
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
             }
-        } else if (command == "TIME")
+        }
+        else if (command == "TIME")
         {
             if (!isConnected)
                 cerr << "You should connect to a server first" << endl;
@@ -112,7 +125,8 @@ int main(void)
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
             }
-        } else if (command == "NAME")
+        }
+        else if (command == "NAME")
         {
             if (!isConnected)
                 cerr << "You should connect to a server first" << endl;
@@ -124,7 +138,8 @@ int main(void)
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
             }
-        } else if (command == "LIST")
+        }
+        else if (command == "LIST")
         {
             if (!isConnected)
                 cerr << "You should connect to a server first" << endl;
@@ -135,7 +150,8 @@ int main(void)
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
             }
-        } else if (command == "SEND")
+        }
+        else if (command == "SEND")
         {
             if (!isConnected)
                 cerr << "You should connect to a server first" << endl;
@@ -156,12 +172,14 @@ int main(void)
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
             }
-        } else if (command == "EXIT")
+        }
+        else if (command == "EXIT")
         {
             if (!isConnected)
             {
                 break;
-            } else
+            }
+            else
             {
                 SndMsg sendMsg(client, client, MsgType::CMD, CmdType::DISC, "");
                 tryExit = true;
@@ -169,6 +187,15 @@ int main(void)
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
             }
+        }
+        else if (command == "HELP")
+        {
+            cout << "Available commands: " << endl << "/CONNECT\t/DISCONNECT\t/TIME\t/NAME\t/LIST\t/SEND\t/EXIT"
+                 << endl;
+        }
+        else
+        {
+            cout << "Unknown command, type \"/HELP\" to see available commands" << endl;
         }
 
         if (realExit) break;
@@ -208,7 +235,7 @@ void messageRecv(int sockFD)
             bool isIn = ackSet.find(make_pair(msg.sendToID, msg.payload)) != ackSet.end();
             if (isIn)
             {
-                cout << "Messag Sent" << endl;
+                cout << "Message Sent" << endl;
                 ackSet.erase(make_pair(msg.sendToID, msg.payload));
             }
             ackSet_mutex.unlock();

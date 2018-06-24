@@ -107,10 +107,8 @@ void userHandler(User &user)
                 }
                 case CmdType::NAME:
                 {
-                    char nameBuf[100];
-                    int retN = gethostname(nameBuf, 100);
-                    nameBuf[retN] = '\0';
-                    sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::NAME, nameBuf);
+                    string buf(getenv("HOSTNAME"));
+                    sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::NAME, buf);
                     break;
                 }
                 case CmdType::TIME:
