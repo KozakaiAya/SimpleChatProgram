@@ -56,7 +56,7 @@ ostream &operator<<(ostream &os, const Message &msg)
     os << "Length: " << msg.length << "Type: " << to_string(msg.type);
     if (msg.type == MsgType::CMD || msg.type == MsgType::ACK)
     {
-        os << "CmdType: " << to_string(this->cmdType);
+        os << "CmdType: " << to_string(msg.cmdType);
         if (msg.cmdType == CmdType::SEND)
             os << "Target: " << msg.sendToID;
     }
@@ -129,7 +129,7 @@ uint16_t RecvMsg::convertBinToUint16(string str)
 
 SndMsg::SndMsg(int socketFD, int fd, MsgType msgType, string payload)
 {
-    this->socketFD = socketFD
+    this->socketFD = socketFD;
     this->sendToID = fd;
     this->type = msgType;
     this->payload = payload;

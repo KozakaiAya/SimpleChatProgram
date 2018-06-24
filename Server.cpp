@@ -52,7 +52,7 @@ int main(void)
     while (1)
     {
         struct sockaddr_in connIn;
-        int connFD = accept(sock, (struct sockaddr_in *) &connIn, NULL);
+        int connFD = accept(sock, (struct sockaddr *) &connIn, NULL);
         if (connFD > 0)
         {
             User user(connFD, connIn);
@@ -81,15 +81,20 @@ void userHandler(User user)
             switch (msg.cmdType)
             {
                 case CmdType::SEND:
+                {
                     sendMsg = SndMsg(msg.sendToID, user.id, MsgType::SND, msg.payload);
                     break;
+                }
                 case CmdType::NAME:
+                {
                     char nameBuf[100];
                     int retN = gethostname(nameBuf, 100);
                     nameBuf[retN] = '\0';
                     sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::NAME, nameBuf);
                     break;
+                }
                 case CmdType::TIME:
+                {
                     char timeBuf[100];
                     struct tm *timeInfo;
                     time_t rawTime;
@@ -98,7 +103,9 @@ void userHandler(User user)
                     strftime(timeBuf, sizeof(timeBuf), "%d-%m-%Y %I:%M:%S", timeInfo);
                     sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::TIME, timeBuf);
                     break;
+                }
                 case CmdType::LIST:
+                {
                     string listBuf;
                     uint16_t count;
                     for (auto x: userList)
@@ -112,13 +119,16 @@ void userHandler(User user)
                     listBuf = "Count:" + SndMsg::convertUint16ToBin(count) + "\n" + listBuf;
                     sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::LIST, listBuf);
                     break;
+                }
                 case CmdType::DISC:
+                {
                     sendMsg = SndMsg(user.id, user.id, MsgType::ACK, CmdType::DISC, "Server: Connection Closed");
                     sendMsg.msgSend();
                     user.isValid = false;
                     shutdown(user.id, 0);
                     terminate();
                     break;
+                }
             }
             sendMsg.msgSend();
         } else if (msg.type == MsgType::ACK)

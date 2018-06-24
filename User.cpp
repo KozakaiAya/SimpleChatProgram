@@ -4,8 +4,9 @@
 
 #include "User.h"
 
-User::User(sockaddr_in connectIn)
+User::User(int fd, sockaddr_in connectIn)
 {
+    this->id = fd;
     this->userSocket = connectIn;
     this->ip = inet_ntoa(connectIn.sin_addr);
     this->port = connectIn.sin_port;

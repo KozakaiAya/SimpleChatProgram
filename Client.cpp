@@ -12,7 +12,7 @@
 #include <queue>
 
 #include "Message.h"
-#include
+#include "User.h"
 
 using namespace std;
 
@@ -39,7 +39,7 @@ int main(void)
     localaddr.sin_port = 9999;  // Any local port will do
     bind(client, (struct sockaddr *) &localaddr, sizeof(localaddr));
 
-    thread *recvThread
+    thread *recvThread;
     thread *sendThread;
 
     while (1)
