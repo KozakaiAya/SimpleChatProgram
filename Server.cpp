@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <thread>
 #include <mutex>
 #include <unistd.h>
@@ -107,7 +108,12 @@ void userHandler(User &user)
                 }
                 case CmdType::NAME:
                 {
-                    string buf(getenv("HOSTNAME"));
+                    char bufC[512];
+                    string buf;
+                    if (gethostname(bufC, 512) == 0)
+                    { // success = 0, failure = -1
+                        buf = bufC;
+                    }
                     sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::NAME, buf);
                     break;
                 }
