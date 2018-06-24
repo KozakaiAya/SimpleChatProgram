@@ -10,10 +10,12 @@
 #include <mutex>
 #include <unistd.h>
 #include <queue>
+#include <set>
 
 #include "Message.h"
 #include "User.h"
 
+typedef pair<int, string> msgID;
 
 using namespace std;
 
@@ -25,6 +27,8 @@ queue<SndMsg> sendQueue;
 queue<RecvMsg> recvQueue;
 mutex sendQ_mutex;
 mutex recvQ_mutex;
+set<msgID> ackSet;
+mutex ackSet_mutex;
 
 void messageRecv(int sockFD);
 
@@ -33,12 +37,20 @@ void messageSend(int sockFD);
 
 int main(void)
 {
-    int client = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in localaddr;
-    localaddr.sin_family = AF_INET;
-    localaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    localaddr.sin_port = 9999;  // Any local port will do
-    bind(client, (struct sockaddr *) &localaddr, sizeof(localaddr));
+    int client;
+    while (1)
+    {
+        cout << "Please input port: " << endl;
+        int port;
+        cin >> port;
+        client = socket(AF_INET, SOCK_STREAM, 0);
+        struct sockaddr_in localaddr;
+        localaddr.sin_family = AF_INET;
+        localaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        localaddr.sin_port = port;  // Any local port will do
+        if (bind(client, (struct sockaddr *) &localaddr, sizeof(localaddr)) == 0)
+            break;
+    }
 
     thread *recvThread;
     thread *sendThread;
@@ -84,6 +96,7 @@ int main(void)
             else
             {
                 SndMsg sendMsg(client, client, MsgType::CMD, CmdType::DISC, "");
+                isConnected = false;
                 sendQ_mutex.lock();
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
@@ -134,6 +147,11 @@ int main(void)
                 cout << "Message: ";
                 cin >> payload;
                 SndMsg sendMsg(client, stoi(sendFD), MsgType::CMD, CmdType::SEND, payload);
+
+                ackSet_mutex.lock();
+                ackSet.insert(make_pair(sendMsg.sendToID, sendMsg.payload));
+                ackSet_mutex.unlock();
+
                 sendQ_mutex.lock();
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
@@ -180,9 +198,20 @@ void messageRecv(int sockFD)
         if (msg.type == MsgType::SND)
         {
             sendQ_mutex.lock();
-            SndMsg sndMsg(sockFD, sockFD, MsgType::ACK, CmdType::SEND, msg.payload);
+            SndMsg sndMsg(sockFD, msg.sendToID, MsgType::ACK, CmdType::SEND, msg.payload);
             sendQueue.push(sndMsg);
             sendQ_mutex.unlock();
+        }
+        if (msg.type == MsgType::ACK && (msg.cmdType == CmdType::SEND))
+        {
+            ackSet_mutex.lock();
+            bool isIn = ackSet.find(make_pair(msg.sendToID, msg.payload)) != ackSet.end();
+            if (isIn)
+            {
+                cout << "Messag Sent" << endl;
+                ackSet.erase(make_pair(msg.sendToID, msg.payload));
+            }
+            ackSet_mutex.unlock();
         }
         if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC) && (tryExit))
         {

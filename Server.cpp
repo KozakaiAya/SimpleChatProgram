@@ -25,7 +25,7 @@ vector<thread *> threadList;
 
 void ctrlCHandler(int x);
 
-void userHandler(User user);
+void userHandler(User &user);
 
 void messageSend(void);
 
@@ -71,7 +71,7 @@ int main(void)
             cout << "Client: " << connFD << " connected." << endl;
             User user(connFD, connIn);
             userList.push_back(user);
-            thread *thread1 = new thread(userHandler, user);
+            thread *thread1 = new thread(userHandler, ref(user));
             thread1->detach();
             threadList.push_back(thread1);
         } else
@@ -81,11 +81,12 @@ int main(void)
     }
 }
 
-void userHandler(User user)
+void userHandler(User &user)
 {
     char buf[65536];
     SndMsg ackMsg(user.id, user.id, MsgType::ACK, CmdType::CONN, "Server: Connection Established");
     ackMsg.msgSend();
+    bool isTerminated = false;
     while (1)
     {
         int n = recv(user.id, buf, 65536, 0);
@@ -145,7 +146,8 @@ void userHandler(User user)
                     sendMsg.msgSend();
                     user.isValid = false;
                     shutdown(user.id, 0);
-                    terminate();
+                    //terminate();
+                    isTerminated = true;
                     break;
                 }
             }
@@ -154,14 +156,17 @@ void userHandler(User user)
         {
             if (msg.cmdType == CmdType::SEND)
             {
-                sendMsg = SndMsg(msg.sendToID, msg.sendToID, MsgType::ACK, CmdType::SEND, msg.payload);
+                sendMsg = SndMsg(msg.sendToID, user.id, MsgType::ACK, CmdType::SEND, msg.payload);
                 //sendMsg.msgSend();
             }
         }
+
+        if (isTerminated) break;
         sendQ_mutex.lock();
         sendQueue.push(sendMsg);
         sendQ_mutex.unlock();
     }
+    return;
 }
 
 void ctrlCHandler(int x)
