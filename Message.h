@@ -29,7 +29,9 @@ public:
     string payload;
     bool isValid;
 
-    Message() {};
+    Message() = default;
+
+    ~Message() {};
     //string getSendOrReceiveFormat();
 };
 

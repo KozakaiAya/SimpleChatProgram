@@ -103,7 +103,8 @@ void userHandler(User &user)
             {
                 case CmdType::SEND:
                 {
-                    sendMsg = SndMsg(msg.sendToID, user.id, MsgType::SND, msg.payload);
+                    string buf = "From: " + to_string(user.id) + "\n" + msg.payload;
+                    sendMsg = SndMsg(msg.sendToID, user.id, MsgType::SND, buf);
                     break;
                 }
                 case CmdType::NAME:

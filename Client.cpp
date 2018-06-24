@@ -61,13 +61,14 @@ int main(void)
     {
         string command;
         cin >> command;
+        if (realExit) break;
         if (command[0] != '/')
         {
             cerr << "Command should start with \'/\', type /HELP to get the available commands" << endl;
         }
         command.erase(0, 1);
 
-        cout << "Command: " << command << endl;
+        //cout << "Command: " << command << endl;
         if (command == "CONNECT")
         {
             if (!isConnected)
@@ -133,7 +134,7 @@ int main(void)
             else
             {
                 SndMsg sendMsg(client, client, MsgType::CMD, CmdType::NAME, "");
-                cout << "Prepare to Send: " << sendMsg << endl;
+                //cout << "Prepare to Send: " << sendMsg << endl;
                 sendQ_mutex.lock();
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
@@ -209,7 +210,7 @@ int main(void)
 
 void messageRecv(int sockFD)
 {
-    cout << "Recv Thread Start" << endl;
+    //cout << "Recv Thread Start" << endl;
     char buf[65536];
     while (1)
     {
@@ -218,10 +219,10 @@ void messageRecv(int sockFD)
         buf[n] = '\0';
         RecvMsg msg(buf);
 
-        cout << "Recv: " << msg << endl;
+        //cout << "Recv: " << msg << endl;
 
-        cout << msg.payload << endl;
-        recvQueue.pop();
+        if (!((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::SEND))) cout << msg.payload << endl;
+        //recvQueue.pop();
         if (msg.type == MsgType::SND)
         {
             sendQ_mutex.lock();
@@ -232,7 +233,9 @@ void messageRecv(int sockFD)
         if (msg.type == MsgType::ACK && (msg.cmdType == CmdType::SEND))
         {
             ackSet_mutex.lock();
-            bool isIn = ackSet.find(make_pair(msg.sendToID, msg.payload)) != ackSet.end();
+            string realPayload = msg.payload.substr(msg.payload.find('\n') + 1,
+                                                    msg.payload.length() - msg.payload.find('\n') - 1);
+            bool isIn = ackSet.find(make_pair(msg.sendToID, realPayload)) != ackSet.end();
             if (isIn)
             {
                 cout << "Message Sent" << endl;
@@ -240,9 +243,14 @@ void messageRecv(int sockFD)
             }
             ackSet_mutex.unlock();
         }
-        if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC) && (tryExit))
+        if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC))
         {
             realExit = true;
+            cout << "Input anything to exit..." << endl;
+            //while (!recvQueue.empty())
+            //{
+            //    recvQueue.pop();
+            //}
             break;
         }
     }
@@ -252,7 +260,7 @@ void messageRecv(int sockFD)
 
 void messageSend(int sockFD)
 {
-    cout << "Send Thread Start" << endl;
+    //cout << "Send Thread Start" << endl;
     while (1)
     {
         //cout << "Send Thread Start" << endl;
@@ -261,7 +269,7 @@ void messageSend(int sockFD)
         while (!sendQueue.empty())
         {
             SndMsg msg = sendQueue.front();
-            cout << "Send: " << msg << endl;
+            //cout << "Send: " << msg << endl;
             msg.msgSend();
             sendQueue.pop();
         }
