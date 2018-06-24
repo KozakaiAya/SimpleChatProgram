@@ -45,21 +45,32 @@ int main(void)
     sockName.sin_addr.s_addr = htonl(INADDR_ANY);
     if (bind(sock, (struct sockaddr *) &sockName, sizeof(sockName)) < 0)
     {
-        cerr << "Bind" << endl;
+        cerr << "Bind Failed" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(sock, 1) == -1)
+    {
+        cerr << "Listen Failed" << endl;
         exit(EXIT_FAILURE);
     }
 
     while (1)
     {
         struct sockaddr_in connIn;
-        int connFD = accept(sock, (struct sockaddr *) &connIn, NULL);
+        socklen_t connInLength = sizeof(struct sockaddr);
+        int connFD = accept(sock, (struct sockaddr *) &connIn, &connInLength);
         if (connFD > 0)
         {
+            cout << "Client: " << connFD << " connected." << endl;
             User user(connFD, connIn);
             userList.push_back(user);
             thread *thread1 = new thread(userHandler, user);
             thread1->detach();
             threadList.push_back(thread1);
+        } else
+        {
+            cerr << connFD << " No incoming connections." << endl;
         }
     }
 }
@@ -74,6 +85,8 @@ void userHandler(User user)
         int n = recv(user.id, buf, 65536, 0);
         buf[n] = '\0';
         RecvMsg msg(buf);
+
+        cout << msg << endl;
 
         SndMsg sendMsg;
         if (msg.type == MsgType::CMD)

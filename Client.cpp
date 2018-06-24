@@ -63,12 +63,17 @@ int main(void)
             server_addr.sin_family = AF_INET;
             server_addr.sin_addr.s_addr = inet_addr(serverIP.c_str());
             if (connect(client, (struct sockaddr *) &server_addr, sizeof(server_addr)) == 0)
+            {
                 cout << "Successfully connected to " << server << endl;
 
-            isConnected = true;
+                isConnected = true;
 
-            recvThread = new thread(messageRecv, client);
-            sendThread = new thread(messageSend, client);
+                recvThread = new thread(messageRecv, client);
+                sendThread = new thread(messageSend, client);
+            } else
+            {
+                cerr << "Connection Failed." << endl;
+            }
         } else if (command == "DISCONNECT")
         {
             if (!isConnected)
