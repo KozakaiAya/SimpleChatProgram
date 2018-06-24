@@ -37,8 +37,8 @@ void messageSend(int sockFD);
 
 int main(void)
 {
-    int client;
-    while (1)
+    int client = socket(AF_INET, SOCK_STREAM, 0);
+    /*while (1)
     {
         cout << "Please input port: " << endl;
         int port;
@@ -50,7 +50,7 @@ int main(void)
         localaddr.sin_port = port;  // Any local port will do
         if (bind(client, (struct sockaddr *) &localaddr, sizeof(localaddr)) == 0)
             break;
-    }
+    }*/
 
     thread *recvThread;
     thread *sendThread;

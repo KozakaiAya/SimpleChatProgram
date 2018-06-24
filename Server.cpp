@@ -71,7 +71,7 @@ int main(void)
             cout << "Client: " << connFD << " connected." << endl;
             User user(connFD, connIn);
             userList.push_back(user);
-            thread *thread1 = new thread(userHandler, ref(user));
+            thread *thread1 = new thread(userHandler, ref(userList.back()));
             thread1->detach();
             threadList.push_back(thread1);
         } else

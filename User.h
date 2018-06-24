@@ -23,6 +23,8 @@ public:
 
     User(int id, sockaddr_in connectIn);
 
+    User() = default;
+
     sockaddr_in getSockAddrIn();
 };
 
