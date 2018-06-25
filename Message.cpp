@@ -49,6 +49,9 @@ string to_string(MsgType msgType)
         case MsgType::SND:
             return "SND";
             break;
+        case MsgType::ERR:
+            return "ERR";
+            break;
     }
 }
 
@@ -84,9 +87,11 @@ RecvMsg::RecvMsg(string msg)
                 this->type = MsgType::ACK;
             else if (typeT == "SND")
                 this->type = MsgType::SND;
+            else if (typeT == "ERR")
+                this->type = MsgType::ERR;
             else
                 this->isValid = false;
-            if (typeT == "CMD" || typeT == "ACK")
+            if (typeT == "CMD" || typeT == "ACK" || typeT == "ERR")
             {
                 string cmdTypeT = msg.substr(31, 4);
                 if (cmdTypeT == "TIME")
@@ -165,7 +170,7 @@ string SndMsg::convertUint16ToBin(uint16_t n)
 int SndMsg::msgSend()
 {
     string sndBuf = "$$Length:" + convertUint16ToBin(this->length) + "##" + "Type:" + to_string(this->type) + "##";
-    if (this->type == MsgType::CMD || this->type == MsgType::ACK)
+    if (this->type == MsgType::CMD || this->type == MsgType::ACK || this->type == MsgType::ERR)
     {
         sndBuf += "CMDType:" + to_string(this->cmdType) + "##";
         if (this->cmdType == CmdType::SEND)

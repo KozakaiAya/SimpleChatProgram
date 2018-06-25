@@ -219,7 +219,7 @@ void messageRecv(int sockFD)
         buf[n] = '\0';
         RecvMsg msg(buf);
 
-        //cout << "Recv: " << msg << endl;
+        cout << "Recv: " << msg << endl;
 
         if (!((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::SEND))) cout << msg.payload << endl;
         //recvQueue.pop();
@@ -243,7 +243,7 @@ void messageRecv(int sockFD)
             }
             ackSet_mutex.unlock();
         }
-        if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC))
+        if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC) && tryExit)
         {
             realExit = true;
             cout << "Input anything to exit..." << endl;

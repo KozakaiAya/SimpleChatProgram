@@ -12,7 +12,7 @@ using namespace std;
 
 enum class MsgType
 {
-    SND, RPY, CMD, ACK
+    SND, RPY, CMD, ACK, ERR
 };
 enum class CmdType
 {

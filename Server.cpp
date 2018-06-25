@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <cstdlib>
 #include <ctime>
+#include <set>
 
 
 #include "Message.h"
@@ -23,6 +24,7 @@ mutex sendQ_mutex;
 mutex recvQ_mutex;
 vector<User> userList;
 vector<thread *> threadList;
+set<int> userFDSet;
 
 void ctrlCHandler(int x);
 
@@ -32,6 +34,7 @@ void messageSend(void);
 
 int main(void)
 {
+    cout << "Welcome to Chat server, you can only see the message send to and from the server" << endl;
     signal(SIGINT, ctrlCHandler);
 
     int sock;
@@ -71,6 +74,7 @@ int main(void)
         {
             cout << "Client: " << connFD << " connected." << endl;
             User user(connFD, connIn);
+            userFDSet.insert(connFD);
             userList.push_back(user);
             thread *thread1 = new thread(userHandler, ref(userList.back()));
             thread1->detach();
@@ -85,7 +89,8 @@ int main(void)
 void userHandler(User &user)
 {
     char buf[65536];
-    SndMsg ackMsg(user.id, user.id, MsgType::ACK, CmdType::CONN, "Server: Connection Established");
+    string ackString = "Server: Connection Established\tID: " + to_string(user.id);
+    SndMsg ackMsg(user.id, user.id, MsgType::ACK, CmdType::CONN, ackString);
     ackMsg.msgSend();
     bool isTerminated = false;
     while (1)
@@ -104,7 +109,15 @@ void userHandler(User &user)
                 case CmdType::SEND:
                 {
                     string buf = "From: " + to_string(user.id) + "\n" + msg.payload;
-                    sendMsg = SndMsg(msg.sendToID, user.id, MsgType::SND, buf);
+                    if (userFDSet.find(msg.sendToID) != userFDSet.end())
+                    {
+                        sendMsg = SndMsg(msg.sendToID, user.id, MsgType::SND, buf);
+                    }
+                    else
+                    {
+                        string errInfo = "No Client with ID: " + to_string(msg.sendToID);
+                        sendMsg = SndMsg(user.id, msg.sendToID, MsgType::ERR, CmdType::SEND, errInfo);
+                    }
                     break;
                 }
                 case CmdType::NAME:
@@ -125,7 +138,7 @@ void userHandler(User &user)
                     time_t rawTime;
                     time(&rawTime);
                     timeInfo = localtime(&rawTime);
-                    strftime(timeBuf, sizeof(timeBuf), "%d-%m-%Y %I:%M:%S", timeInfo);
+                    strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d %I:%M:%S", timeInfo);
                     sendMsg = SndMsg(user.id, user.id, MsgType::CMD, CmdType::TIME, timeBuf);
                     break;
                 }
@@ -149,6 +162,7 @@ void userHandler(User &user)
                 {
                     sendMsg = SndMsg(user.id, user.id, MsgType::ACK, CmdType::DISC, "Server: Connection Closed");
                     sendMsg.msgSend();
+                    userFDSet.erase(user.id);
                     user.isValid = false;
                     shutdown(user.id, 0);
                     //terminate();
