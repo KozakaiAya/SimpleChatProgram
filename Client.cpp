@@ -127,10 +127,13 @@ int main(void)
                 cerr << "You should connect to a server first" << endl;
             else
             {
-                SndMsg sendMsg(client, client, MsgType::CMD, CmdType::TIME, "");
-                sendQ_mutex.lock();
-                sendQueue.push(sendMsg);
-                sendQ_mutex.unlock();
+                for (int i = 0; i < 100; i++)
+                {
+                    SndMsg sendMsg(client, client, MsgType::CMD, CmdType::TIME, "");
+                    sendQ_mutex.lock();
+                    sendQueue.push(sendMsg);
+                    sendQ_mutex.unlock();
+                }
             }
         }
         else if (command == "NAME")
