@@ -190,7 +190,7 @@ void userHandler(User &user)
                     sendMsg.msgSend();
                     userFDSet.erase(user.id);
                     user.isValid = false;
-                    shutdown(user.id, 0);
+                    shutdown(user.id, 2);
                     //terminate();
                     isTerminated = true;
                     break;

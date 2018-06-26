@@ -115,10 +115,10 @@ int main(void)
             else
             {
                 SndMsg sendMsg(client, client, MsgType::CMD, CmdType::DISC, "");
-                isConnected = false;
                 sendQ_mutex.lock();
                 sendQueue.push(sendMsg);
                 sendQ_mutex.unlock();
+                isConnected = false;
             }
         }
         else if (command == "TIME")
@@ -222,6 +222,7 @@ void messageRecv(int sockFD)
     while (1)
     {
         //cout << "Recv Thread Start" << endl;
+        //if (!isConnected) break;
         int n = recv(sockFD, buf, 65536, 0);
         buf[n] = '\0';
         RecvMsg msg(buf);
@@ -260,7 +261,12 @@ void messageRecv(int sockFD)
             //}
             break;
         }
+        if ((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::DISC) && !isConnected)
+        {
+            break;
+        }
     }
+    shutdown(sockFD, 2);
     return;
 }
 
@@ -271,6 +277,7 @@ void messageSend(int sockFD)
     while (1)
     {
         //cout << "Send Thread Start" << endl;
+        if (!isConnected && sendQueue.empty()) break;
         if (realExit) break;
         sendQ_mutex.lock();
         while (!sendQueue.empty())
@@ -282,6 +289,7 @@ void messageSend(int sockFD)
         }
         sendQ_mutex.unlock();
     }
+    //shutdown(sockFD, 0);
     return;
 }
 
@@ -293,9 +301,16 @@ void keepAlive(int sockFD)
         if (realExit) break;
         //cout << "Send Keepalive" << endl;
         SndMsg msg(sockFD, sockFD, MsgType::CMD, CmdType::LIVE, "");
-        sendQ_mutex.lock();
-        sendQueue.push(msg);
-        sendQ_mutex.unlock();
+        if (isConnected)
+        {
+            sendQ_mutex.lock();
+            sendQueue.push(msg);
+            sendQ_mutex.unlock();
+        }
+        else
+        {
+            break;
+        }
         this_thread::sleep_for(chrono::seconds(100));
     }
 }
