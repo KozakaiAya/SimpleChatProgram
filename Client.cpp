@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <queue>
 #include <set>
+#include <chrono>
 
 #include "Message.h"
 #include "User.h"
@@ -293,6 +294,6 @@ void keepAlive(int sockFD)
         sendQ_mutex.lock();
         sendQueue.push(msg);
         sendQ_mutex.unlock();
-        this_thread::sleep_for(100s);
+        this_thread::sleep_for(chrono::seconds(100));
     }
 }
