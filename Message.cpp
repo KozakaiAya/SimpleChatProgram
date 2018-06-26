@@ -30,6 +30,9 @@ string to_string(CmdType cmdType)
         case CmdType::NAME:
             return "NAME";
             break;
+        case CmdType::LIVE:
+            return "LIVE";
+            break;
     }
 }
 
@@ -109,6 +112,8 @@ RecvMsg::RecvMsg(string msg)
                     this->sendToID = convertBinToUint16(sendTargetT);
                 } else if (cmdTypeT == "DISC")
                     this->cmdType = CmdType::DISC;
+                else if (cmdTypeT == "LIVE")
+                    this->cmdType = CmdType::LIVE;
                 else
                     this->isValid = false;
 

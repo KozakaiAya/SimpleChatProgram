@@ -34,6 +34,8 @@ void messageRecv(int sockFD);
 
 void messageSend(int sockFD);
 
+void keepAlive(int sockFD);
+
 
 int main(void)
 {
@@ -56,6 +58,7 @@ int main(void)
 
     thread *recvThread;
     thread *sendThread;
+    thread *keepAliveThread;
 
     while (1)
     {
@@ -91,6 +94,8 @@ int main(void)
 
                     recvThread = new thread(messageRecv, client);
                     sendThread = new thread(messageSend, client);
+                    keepAliveThread = new thread(keepAlive, client);
+                    keepAliveThread->detach();
                 }
                 else
                 {
@@ -219,7 +224,7 @@ void messageRecv(int sockFD)
         buf[n] = '\0';
         RecvMsg msg(buf);
 
-        cout << "Recv: " << msg << endl;
+        //cout << "Recv: " << msg << endl;
 
         if (!((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::SEND))) cout << msg.payload << endl;
         //recvQueue.pop();
@@ -276,4 +281,18 @@ void messageSend(int sockFD)
         sendQ_mutex.unlock();
     }
     return;
+}
+
+
+void keepAlive(int sockFD)
+{
+    while (1)
+    {
+        if (realExit) break;
+        SndMsg msg(sockFD, sockFD, MsgType::CMD, CmdType::LIVE, "");
+        sendQ_mutex.lock();
+        sendQueue.push(msg);
+        sendQ_mutex.unlock();
+        this_thread::sleep_for(100s);
+    }
 }

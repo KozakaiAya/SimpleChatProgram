@@ -16,7 +16,7 @@ enum class MsgType
 };
 enum class CmdType
 {
-    TIME, NAME, LIST, CONN, SEND, DISC
+    TIME, NAME, LIST, CONN, SEND, DISC, LIVE
 };
 
 class Message

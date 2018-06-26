@@ -11,10 +11,13 @@
 #include <cstdlib>
 #include <ctime>
 #include <set>
+#include <poll.h>
 
 
 #include "Message.h"
 #include "User.h"
+
+#define USER_TIME_OUT 6000000
 
 using namespace std;
 
@@ -79,7 +82,8 @@ int main(void)
             thread *thread1 = new thread(userHandler, ref(userList.back()));
             thread1->detach();
             threadList.push_back(thread1);
-        } else
+        }
+        else
         {
             cerr << connFD << " No incoming connections." << endl;
         }
@@ -95,8 +99,29 @@ void userHandler(User &user)
     bool isTerminated = false;
     while (1)
     {
-        int n = recv(user.id, buf, 65536, 0);
-        buf[n] = '\0';
+        struct pollfd pollFD;
+        int ret;
+
+        pollFD.fd = user.id; // your socket handler
+        pollFD.events = POLLIN;
+        ret = poll(&pollFD, 1, USER_TIME_OUT); // 1 second for timeout
+        switch (ret)
+        {
+            case -1:
+                // Error
+                break;
+            case 0:
+                // Timeout
+                cout << "User " << user.id << " timeout" << endl;
+                isTerminated = true;
+                break;
+            default:
+                int n = recv(user.id, buf, 65536, 0);
+                buf[n] = '\0';
+                break;
+        }
+        if (isTerminated) break;
+
         RecvMsg msg(buf);
 
         cout << "Recv: " << msg << endl;
@@ -169,9 +194,14 @@ void userHandler(User &user)
                     isTerminated = true;
                     break;
                 }
+                case CmdType::LIVE:
+                {
+                    break;
+                }
             }
             //sendMsg.msgSend();
-        } else if (msg.type == MsgType::ACK)
+        }
+        else if (msg.type == MsgType::ACK)
         {
             if (msg.cmdType == CmdType::SEND)
             {
