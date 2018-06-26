@@ -168,7 +168,8 @@ int main(void)
                 cout << "ID: ";
                 cin >> sendFD;
                 cout << "Message: ";
-                cin >> payload;
+                cin >> ws;
+                getline(cin, payload);
                 SndMsg sendMsg(client, stoi(sendFD), MsgType::CMD, CmdType::SEND, payload);
 
                 ackSet_mutex.lock();
@@ -290,6 +291,7 @@ void keepAlive(int sockFD)
     while (1)
     {
         if (realExit) break;
+        //cout << "Send Keepalive" << endl;
         SndMsg msg(sockFD, sockFD, MsgType::CMD, CmdType::LIVE, "");
         sendQ_mutex.lock();
         sendQueue.push(msg);

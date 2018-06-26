@@ -113,6 +113,7 @@ void userHandler(User &user)
             case 0:
                 // Timeout
                 cout << "User " << user.id << " timeout" << endl;
+                user.isValid = false;
                 isTerminated = true;
                 break;
             default:
@@ -211,9 +212,12 @@ void userHandler(User &user)
         }
 
         if (isTerminated) break;
-        sendQ_mutex.lock();
-        sendQueue.push(sendMsg);
-        sendQ_mutex.unlock();
+        if ((msg.type != MsgType::CMD) || (msg.cmdType != CmdType::LIVE))
+        {
+            sendQ_mutex.lock();
+            sendQueue.push(sendMsg);
+            sendQ_mutex.unlock();
+        }
     }
     return;
 }
