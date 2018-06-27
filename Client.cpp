@@ -12,9 +12,12 @@
 #include <queue>
 #include <set>
 #include <chrono>
+#include <poll.h>
 
 #include "Message.h"
 #include "User.h"
+
+#define USER_TIME_OUT 6000000
 
 typedef pair<int, string> msgID;
 
@@ -23,6 +26,7 @@ using namespace std;
 bool isConnected = false;
 bool tryExit = false;
 bool realExit = false;
+bool connectionLoss = false;
 
 queue<SndMsg> sendQueue;
 queue<RecvMsg> recvQueue;
@@ -92,6 +96,7 @@ int main(void)
                     cout << "Successfully connected to " << server << endl;
 
                     isConnected = true;
+                    connectionLoss = false;
 
                     recvThread = new thread(messageRecv, client);
                     sendThread = new thread(messageSend, client);
@@ -223,8 +228,29 @@ void messageRecv(int sockFD)
     {
         //cout << "Recv Thread Start" << endl;
         //if (!isConnected) break;
-        int n = recv(sockFD, buf, 65536, 0);
-        buf[n] = '\0';
+        struct pollfd pollFD;
+        int ret;
+
+        pollFD.fd = sockFD; // your socket handler
+        pollFD.events = POLLIN;
+        ret = poll(&pollFD, 1, USER_TIME_OUT); // 1 second for timeout
+        switch (ret)
+        {
+            case -1:
+                // Error
+                break;
+            case 0:
+                // Timeout
+                cout << "Server timeout" << endl;
+                connectionLoss = true;
+                isConnected = false;
+                break;
+            default:
+                int n = recv(sockFD, buf, 65536, 0);
+                buf[n] = '\0';
+                break;
+        }
+        if (connectionLoss) break;
         RecvMsg msg(buf);
 
         //cout << "Recv: " << msg << endl;
@@ -278,6 +304,7 @@ void messageSend(int sockFD)
     {
         //cout << "Send Thread Start" << endl;
         if (!isConnected && sendQueue.empty()) break;
+        if (connectionLoss) break;
         if (realExit) break;
         sendQ_mutex.lock();
         while (!sendQueue.empty())

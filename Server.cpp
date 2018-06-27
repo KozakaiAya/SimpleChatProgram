@@ -197,6 +197,7 @@ void userHandler(User &user)
                 }
                 case CmdType::LIVE:
                 {
+                    sendMsg = SndMsg(user.id, user.id, MsgType::ACK, CmdType::LIVE, "");
                     break;
                 }
             }
@@ -212,12 +213,9 @@ void userHandler(User &user)
         }
 
         if (isTerminated) break;
-        if ((msg.type != MsgType::CMD) || (msg.cmdType != CmdType::LIVE))
-        {
-            sendQ_mutex.lock();
-            sendQueue.push(sendMsg);
-            sendQ_mutex.unlock();
-        }
+        sendQ_mutex.lock();
+        sendQueue.push(sendMsg);
+        sendQ_mutex.unlock();
     }
     return;
 }
