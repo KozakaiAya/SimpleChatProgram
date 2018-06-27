@@ -13,6 +13,7 @@
 #include <set>
 #include <chrono>
 #include <poll.h>
+#include <signal.h>
 
 #include "Message.h"
 #include "User.h"
@@ -27,6 +28,7 @@ bool isConnected = false;
 bool tryExit = false;
 bool realExit = false;
 bool connectionLoss = false;
+int client;
 
 queue<SndMsg> sendQueue;
 queue<RecvMsg> recvQueue;
@@ -41,10 +43,11 @@ void messageSend(int sockFD);
 
 void keepAlive(int sockFD);
 
+void ctrlCHandler(int x);
+
 
 int main(void)
 {
-    int client;
     /*while (1)
     {
         cout << "Please input port: " << endl;
@@ -58,6 +61,8 @@ int main(void)
         if (bind(client, (struct sockaddr *) &localaddr, sizeof(localaddr)) == 0)
             break;
     }*/
+
+    signal(SIGINT, ctrlCHandler);
 
     cout << "Client Started. Type \"/HELP\" to see available comands." << endl;
 
@@ -255,7 +260,8 @@ void messageRecv(int sockFD)
 
         //cout << "Recv: " << msg << endl;
 
-        if (!((msg.type == MsgType::ACK) && (msg.cmdType == CmdType::SEND))) cout << msg.payload << endl;
+        if (!((msg.type == MsgType::ACK) && ((msg.cmdType == CmdType::SEND) || (msg.cmdType == CmdType::LIVE))))
+            cout << msg.payload << endl;
         //recvQueue.pop();
         if (msg.type == MsgType::SND)
         {
@@ -340,4 +346,15 @@ void keepAlive(int sockFD)
         }
         this_thread::sleep_for(chrono::seconds(100));
     }
+}
+
+void ctrlCHandler(int x)
+{
+    SndMsg sendMsg(client, client, MsgType::CMD, CmdType::DISC, "");
+    tryExit = true;
+    sendQ_mutex.lock();
+    sendQueue.push(sendMsg);
+    sendQ_mutex.unlock();
+    isConnected = false;
+    return;
 }

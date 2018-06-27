@@ -39,6 +39,7 @@ int main(void)
 {
     cout << "Welcome to Chat server, you can only see the message send to and from the server" << endl;
     signal(SIGINT, ctrlCHandler);
+    signal(SIGPIPE, SIG_IGN);
 
     int sock;
     struct sockaddr_in sockName;
@@ -226,7 +227,7 @@ void ctrlCHandler(int x)
     {
         SndMsg sendMsg(x.id, x.id, MsgType::ACK, CmdType::DISC, "Server: Connection Closed");
         sendMsg.msgSend();
-        shutdown(x.id, 0);
+        shutdown(x.id, 2);
     }
     cout << "Server Shutdown" << endl;
     return;
