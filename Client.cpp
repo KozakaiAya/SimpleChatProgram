@@ -18,7 +18,7 @@
 #include "Message.h"
 #include "User.h"
 
-#define USER_TIME_OUT 6000000
+#define USER_TIME_OUT 300000
 
 typedef pair<int, string> msgID;
 

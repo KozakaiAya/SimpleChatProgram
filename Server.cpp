@@ -17,7 +17,7 @@
 #include "Message.h"
 #include "User.h"
 
-#define USER_TIME_OUT 6000000
+#define USER_TIME_OUT 300000
 
 using namespace std;
 
@@ -106,6 +106,7 @@ void userHandler(User &user)
         pollFD.fd = user.id; // your socket handler
         pollFD.events = POLLIN;
         ret = poll(&pollFD, 1, USER_TIME_OUT); // 1 second for timeout
+        //ret = poll(&pollFD, 1, 1000); // 1 second for timeout
         switch (ret)
         {
             case -1:
@@ -114,6 +115,7 @@ void userHandler(User &user)
             case 0:
                 // Timeout
                 cout << "User " << user.id << " timeout" << endl;
+                userFDSet.erase(user.id);
                 user.isValid = false;
                 isTerminated = true;
                 break;
@@ -122,7 +124,11 @@ void userHandler(User &user)
                 buf[n] = '\0';
                 break;
         }
-        if (isTerminated) break;
+        if (isTerminated)
+        {
+            shutdown(user.id, 2);
+            break;
+        }
 
         RecvMsg msg(buf);
 
@@ -172,7 +178,7 @@ void userHandler(User &user)
                 case CmdType::LIST:
                 {
                     string listBuf;
-                    uint16_t count;
+                    uint16_t count = 0;
                     for (auto x: userList)
                     {
                         if (x.isValid)
